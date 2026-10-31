@@ -14,3 +14,7 @@
 - Router compares cost in $ per 1,000 queries so lambda values stay readable (0.1–10).
 - Query embeddings cached in cache/ (gitignored); embedding all 8,218 queries takes ~7 min on CPU.
 - PyTorch installed from the CPU-only wheel index (pyproject [tool.uv.sources]) — no GPU.
+- v2 router change 1: neighbours weighted by cosine similarity (weighted mean of score and cost); remaining utility ties (to 9 dp) go to lower predicted cost instead of alphabetical order.
+- v2 router change 2: embed only the question text (text after "[User Query]\n", minus leading "Question:"/"## Question:"/"Task:"/"Complete the following function:" labels); options, passages and code kept. Cache cleared and rebuilt.
+- v1 → v2 test results (avg score / total cost): λ=0 0.776/$1.123 → 0.736/$0.576; λ=0.1 0.735/$0.450 → 0.732/$0.490; λ=0.3 0.729/$0.337 → 0.727/$0.354; λ=1 0.722/$0.129 → 0.715/$0.137; λ=3 0.720/$0.085 → 0.711/$0.089; λ=10 0.709/$0.059 → 0.701/$0.059. Raw CSVs in results/v1 and results/v2.
+- Finding: v1's λ=0 score was inflated by the alphabetical tie-break happening to favour cogito (the strongest model). Change 1 alone leaves λ>0 roughly unchanged. Change 2 slightly hurts every λ: neighbour same-task rate fell 0.58 → 0.56, because the instruction template itself signals the task type (math vs code vs multiple choice).

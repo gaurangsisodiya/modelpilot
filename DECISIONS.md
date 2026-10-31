@@ -27,3 +27,4 @@
 - NVIDIA client: 60 s timeout, 1 retry; API errors return HTTP 502 without echoing details.
 - kNN weights computed in float64 (float32 embeddings gave predicted scores like 1.0000000427); v3 sweep re-run and identical.
 - Known limitation: live queries lack the dataset's "[System Instruction]" template, so their neighbours are less task-aware than in the offline evaluation.
+- Tests use tiny hand-made DataFrames/vectors (tests/conftest.py), so they need no dataset, encoder or network. The FastAPI endpoints are not unit-tested; they were checked manually against the live API in Phase 5.

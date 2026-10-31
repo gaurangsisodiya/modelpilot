@@ -9,10 +9,14 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "datasets>=5.1.0",
+    "fastapi>=0.162.0",
     "matplotlib>=3.11.2",
+    "openai>=3.42.0",
     "pandas>=3.1.0",
+    "python-dotenv>=1.2.4",
     "sentence-transformers>=6.2.0",
     "torch>=2.15.0",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]

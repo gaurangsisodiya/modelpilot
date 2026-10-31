@@ -22,3 +22,8 @@
 - v1's λ=0 score (0.776) was inflated by alphabetical tie-breaking: ties went to cogito-v2-1-671b, which happens to be the strongest model. With cost tie-breaks (v3) λ=0 gives 0.736 at $0.518.
 - v3 = v1 embeddings (full prompts) + similarity-weighted kNN + cost tie-break. Test: λ=0 0.736/$0.518; λ=0.1 0.733/$0.455; λ=0.3 0.730/$0.331; λ=1 0.720/$0.130; λ=3 0.719/$0.084; λ=10 0.710/$0.058. v3 is the version used from Phase 4 on.
 - Phase 4 chart puts cost on a log x-axis (costs span $0.05–$1.7); router = one line over λ, baselines = labelled points. Colours from a CVD-validated palette (blue router, orange baselines).
+- Phase 5 /chat model choice = live availability: at startup fetch NVIDIA /v1/models; call the routed model on NVIDIA if its api_model_id is listed, else fall back to the listed candidate with the highest train avg score. Only 2 of 18 candidates are listed (2026-10-31): mistral-7b-instruct-v0.3 and openai/gpt-oss-20b (dataset says Together, but NVIDIA serves it); the other 5 "NVIDIA" models are retired. So today's fallback is gpt-oss-20b.
+- /route and /chat default λ = 3 (Phase 4 sweet spot), overridable with "lambda" in the request body.
+- NVIDIA client: 60 s timeout, 1 retry; API errors return HTTP 502 without echoing details.
+- kNN weights computed in float64 (float32 embeddings gave predicted scores like 1.0000000427); v3 sweep re-run and identical.
+- Known limitation: live queries lack the dataset's "[System Instruction]" template, so their neighbours are less task-aware than in the offline evaluation.

@@ -15,10 +15,10 @@ def load_encoder() -> SentenceTransformer:
     return SentenceTransformer(ENCODER_NAME, device="cpu")
 
 
-def embed(texts: list[str], encoder: SentenceTransformer) -> np.ndarray:
+def embed(texts: list[str], encoder: SentenceTransformer, progress: bool = False) -> np.ndarray:
     """Encode texts into unit-length vectors, shape (len(texts), 384)."""
     return encoder.encode(
-        texts, batch_size=64, normalize_embeddings=True, show_progress_bar=True
+        texts, batch_size=64, normalize_embeddings=True, show_progress_bar=progress
     )
 
 
@@ -33,7 +33,7 @@ def split_embeddings(split: str, results: pd.DataFrame, encoder: SentenceTransfo
     path = CACHE_DIR / f"{split}_embeddings.npy"
     if path.exists():
         return np.load(path)
-    vectors = embed(query_table(results)["query"].tolist(), encoder)
+    vectors = embed(query_table(results)["query"].tolist(), encoder, progress=True)
     CACHE_DIR.mkdir(exist_ok=True)
     np.save(path, vectors)
     return vectors

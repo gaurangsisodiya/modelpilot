@@ -31,8 +31,9 @@ def weighted_mean(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
 
     `values` has shape (queries, k, models); `weights` has shape (queries, k).
     Negative similarities are clipped to a tiny positive weight so the sum is never zero.
+    Weights are cast to float64: float32 embeddings otherwise give scores like 1.0000000427.
     """
-    weights = np.clip(weights, 1e-6, None)[:, :, None]
+    weights = np.clip(weights.astype(np.float64), 1e-6, None)[:, :, None]
     return (values * weights).sum(axis=1) / weights.sum(axis=1)
 
 

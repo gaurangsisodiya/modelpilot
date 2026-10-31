@@ -9,3 +9,8 @@
 - Oracle = per query, the model with the highest performance; ties broken by lowest cost. No correctness threshold.
 - Queries no model answers: all tie at 0, so the oracle picks the cheapest model (follows from the rule above).
 - Baselines "cheapest" and "best" fixed models are picked from train-split stats, then evaluated on test (no test leakage).
+- Router cost term = kNN-predicted cost (mean cost of that model on the k nearest train queries), since real output tokens are unknown before calling.
+- kNN uses k = 10 (fixed, no tuning), cosine similarity on normalised MiniLM embeddings.
+- Router compares cost in $ per 1,000 queries so lambda values stay readable (0.1–10).
+- Query embeddings cached in cache/ (gitignored); embedding all 8,218 queries takes ~7 min on CPU.
+- PyTorch installed from the CPU-only wheel index (pyproject [tool.uv.sources]) — no GPU.

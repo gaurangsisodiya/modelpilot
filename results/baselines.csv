@@ -1,0 +1,4 @@
+strategy,avg_score,total_cost,queries
+always-cheapest (gpt-oss-20b),0.6975916538413446,0.054031300000000004,3729
+always-best (cogito-v2-1-671b),0.805393125427103,1.70669,3729
+oracle,0.9292880475843897,0.12062819,3729

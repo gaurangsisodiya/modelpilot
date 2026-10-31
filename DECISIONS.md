@@ -21,3 +21,4 @@
 - Template stripping tested in v2 and reverted: the instruction text carries task-type signal; same-task neighbour share fell 0.58 → 0.56 without it.
 - v1's λ=0 score (0.776) was inflated by alphabetical tie-breaking: ties went to cogito-v2-1-671b, which happens to be the strongest model. With cost tie-breaks (v3) λ=0 gives 0.736 at $0.518.
 - v3 = v1 embeddings (full prompts) + similarity-weighted kNN + cost tie-break. Test: λ=0 0.736/$0.518; λ=0.1 0.733/$0.455; λ=0.3 0.730/$0.331; λ=1 0.720/$0.130; λ=3 0.719/$0.084; λ=10 0.710/$0.058. v3 is the version used from Phase 4 on.
+- Phase 4 chart puts cost on a log x-axis (costs span $0.05–$1.7); router = one line over λ, baselines = labelled points. Colours from a CVD-validated palette (blue router, orange baselines).

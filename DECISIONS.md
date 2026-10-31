@@ -8,3 +8,4 @@
 - Score metric = mean of `performance` (squad keeps partial F1 credit); always labelled "avg score", never "accuracy".
 - Oracle = per query, the model with the highest performance; ties broken by lowest cost. No correctness threshold.
 - Queries no model answers: all tie at 0, so the oracle picks the cheapest model (follows from the rule above).
+- Baselines "cheapest" and "best" fixed models are picked from train-split stats, then evaluated on test (no test leakage).

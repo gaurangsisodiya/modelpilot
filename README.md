@@ -95,6 +95,29 @@ What this says:
 
 Full results: [results/v4_llmrouter/comparison.csv](results/v4_llmrouter/comparison.csv).
 
+## Learned router
+
+A small MLP (scikit-learn `MLPRegressor`, one hidden layer) predicts all 18 models' scores from the MiniLM embedding, and a Ridge regression predicts each model's cost. Routing uses the same rule as kNN: pick the model with the highest predicted score − λ × predicted cost.
+
+Tuning never touches test. 20% of train queries (897, split per task) are held out as validation; every setting is picked there:
+
+- kNN k = 20 (was 10), MLP hidden = 256 with L2 alpha = 1, Ridge alpha = 0.1, chosen by validation MSE of the predicted scores and costs.
+- Default λ = 1 (was 3): the largest λ whose validation avg score is within 0.01 of the best λ.
+- Rule for replacing kNN: at the default λ, the MLP's avg score must beat kNN with a paired-bootstrap 95% CI above 0, at no more than 10% higher cost. On validation the MLP scored −0.012 [−0.032, +0.005], so **kNN stays the default**.
+
+Then both routers were refit on the full train split and run on test **once**:
+
+| λ | kNN avg score | kNN cost ($) | MLP avg score | MLP cost ($) |
+|---:|---:|---:|---:|---:|
+| 0 | 0.748 | 0.806 | 0.781 | 1.137 |
+| 0.1 | 0.749 | 0.663 | 0.757 | 0.473 |
+| 0.3 | 0.740 | 0.316 | 0.752 | 0.215 |
+| **1** | **0.732** | **0.124** | **0.746** | **0.149** |
+| 3 | 0.725 | 0.085 | 0.739 | 0.082 |
+| 10 | 0.710 | 0.054 | 0.719 | 0.063 |
+
+On test the MLP scores higher at every λ. At λ = 1 the gain is significant (+0.014, 95% CI [+0.003, +0.024]) but costs 20% more, so it would fail the replacement rule on test as well. The default was fixed before test was run and is not changed after seeing it. Validation and test disagree, which suggests the 897-query validation slice is too small to separate the two routers reliably. Details: [results/v6_learned/](results/v6_learned/).
+
 ## Live API
 
 `POST /route` returns the model the router picks. `POST /chat` routes the query, then calls the model on NVIDIA's API.
@@ -113,7 +136,7 @@ curl -X POST localhost:8000/chat -H 'Content-Type: application/json' \
 #  "api_model_id":"openai/gpt-oss-20b","fallback":true,"response":"..."}
 ```
 
-`lambda` is optional (default 3). Interactive docs are at http://localhost:8000/docs.
+`lambda` is optional (default 1, chosen on validation). Interactive docs are at http://localhost:8000/docs.
 
 ## How to run
 
@@ -126,6 +149,8 @@ uv run python scripts/model_table.py       # per-model avg score and cost (train
 uv run python scripts/baselines.py         # baselines on test
 uv run python scripts/evaluate_router.py --out results/v3   # router λ sweep
 uv run python scripts/make_results.py      # results/results.md + results/cost_vs_score.png
+uv run python scripts/tune_routers.py      # tune kNN + MLP on validation (no test data)
+uv run python scripts/compare_learned.py   # one-time test comparison, kNN vs MLP
 
 uv run pytest                              # unit tests (no data or network needed)
 ```
@@ -155,17 +180,20 @@ src/modelpilot/
   evaluation.py   avg score and total cost of any strategy
   embeddings.py   MiniLM embeddings with disk cache
   router.py       kNN prediction and the λ decision rule
+  learned.py      MLP score + Ridge cost router
+  validation.py   validation split, default-λ and replacement rules
+  stats.py        paired bootstrap
   report.py       results table and chart
   nvidia.py       NVIDIA API client
   serving.py      routed model vs NVIDIA fallback
   api.py          FastAPI app
 scripts/          runnable scripts for each step
 tests/            pytest unit tests
-results/          sweep CSVs (v1–v3), results table, chart
+results/          sweep CSVs (v1–v3), LLMRouter comparison (v4), learned router (v6)
 ```
 
 ## Limitations
 
 - Live queries don't carry the dataset's instruction template, so live routing is less task-aware than the offline evaluation.
 - The test split's task mix differs from train (e.g. 500 vs 63 MMLU-Pro queries), which the router has to cope with.
-- k = 10 is fixed, not tuned.
+- k and the default λ were tuned on a 897-query validation slice, which is small: validation and test disagree on kNN vs MLP.

@@ -22,7 +22,8 @@ from modelpilot.router import KNNRouter, pick_models
 from modelpilot.serving import choose_served_model
 from modelpilot.summary import model_summary
 
-DEFAULT_LAMBDA = 3.0
+DEFAULT_LAMBDA = 1.0  # chosen on validation (Phase 8)
+KNN_K = 20  # chosen on validation (Phase 8)
 
 
 @dataclass
@@ -47,7 +48,7 @@ def load_state() -> AppState:
         candidates=candidates,
         summary=model_summary(train),
         encoder=encoder,
-        router=KNNRouter.from_results(train, split_embeddings("train", train, encoder), k=10),
+        router=KNNRouter.from_results(train, split_embeddings("train", train, encoder), k=KNN_K),
         client=client,
         available_ids=available_model_ids(client),
     )

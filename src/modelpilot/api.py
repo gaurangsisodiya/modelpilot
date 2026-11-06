@@ -18,12 +18,10 @@ from modelpilot.cost import add_cost
 from modelpilot.data import load_candidates, load_split
 from modelpilot.embeddings import embed, load_encoder, split_embeddings
 from modelpilot.nvidia import available_model_ids, chat, make_client
-from modelpilot.router import KNNRouter, pick_models
+from modelpilot.router import DEFAULT_K, DEFAULT_LAMBDA, KNNRouter, pick_models
 from modelpilot.serving import choose_served_model
 from modelpilot.summary import model_summary
 
-DEFAULT_LAMBDA = 1.0  # chosen on validation (Phase 8)
-KNN_K = 20  # chosen on validation (Phase 8)
 
 
 @dataclass
@@ -48,7 +46,7 @@ def load_state() -> AppState:
         candidates=candidates,
         summary=model_summary(train),
         encoder=encoder,
-        router=KNNRouter.from_results(train, split_embeddings("train", train, encoder), k=KNN_K),
+        router=KNNRouter.from_results(train, split_embeddings("train", train, encoder), k=DEFAULT_K),
         client=client,
         available_ids=available_model_ids(client),
     )

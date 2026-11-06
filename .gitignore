@@ -221,3 +221,6 @@ __marimo__/
 
 # ModelPilot: cached query embeddings
 cache/
+
+# ModelPilot: gateway request logs
+logs/

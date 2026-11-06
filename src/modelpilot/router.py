@@ -8,6 +8,10 @@ import pandas as pd
 # Costs are compared in dollars per 1,000 queries so lambda stays in a readable range.
 COST_SCALE = 1000
 
+# Defaults for live routing, both chosen on validation (Phase 8).
+DEFAULT_K = 20
+DEFAULT_LAMBDA = 1.0
+
 
 def per_query_matrix(results: pd.DataFrame, column: str, models: list[str]) -> np.ndarray:
     """Pivot results into shape (queries, models): row = embedding_id order, column = models order."""

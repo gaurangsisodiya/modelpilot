@@ -1,0 +1,16 @@
+{
+  "router": "largest_llm",
+  "dataset": "llmrouter_generic",
+  "alpha": 1.0,
+  "beta": 0.0,
+  "avg_performance": 0.7029,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 139.5,
+  "avg_token_cost": 267.8,
+  "avg_price_cost": 0.0003141,
+  "avg_reward": 0.7029,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "deepseek-v3.1": 3729
+  }
+}

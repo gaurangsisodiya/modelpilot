@@ -1,0 +1,16 @@
+{
+  "router": "smallest_llm",
+  "dataset": "llmrouter_generic",
+  "alpha": 1.0,
+  "beta": 0.0,
+  "avg_performance": 0.5755,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 68.5,
+  "avg_token_cost": 196.8,
+  "avg_price_cost": 3.937e-05,
+  "avg_reward": 0.5755,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "qwen2.5-7b-instruct": 3729
+  }
+}

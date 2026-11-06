@@ -1,0 +1,20 @@
+{
+  "router": "svmrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.6,
+  "beta": 0.4,
+  "avg_performance": 0.7135,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 35.7,
+  "avg_token_cost": 164.1,
+  "avg_price_cost": 1.174e-05,
+  "avg_reward": 0.4037,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-20b": 3206,
+    "gemma-2-9b-it": 476,
+    "llama-3-8b-instruct-lite": 31,
+    "rnj-1-instruct": 14,
+    "qwen2.5-7b-instruct": 2
+  }
+}

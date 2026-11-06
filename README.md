@@ -71,7 +71,29 @@ Pure-performance training (α = 1.0, LLMRouter's default):
 | LLMRouter svmrouter | **modified labels** | 0.808 | 1.705 |
 | always-best (cogito-v2-1-671b) | – | 0.805 | 1.707 |
 
-With modified labels, knnrouter and svmrouter route ~99% of queries to cogito-v2-1-671b, so they match always-best. Full results, including LLMRouter's cost-aware settings, are in [results/v4_llmrouter/comparison.csv](results/v4_llmrouter/comparison.csv).
+With modified labels, knnrouter and svmrouter route ~99% of queries to cogito-v2-1-671b, so they match always-best.
+
+Cost-aware training: LLMRouter's α sweep (α = 0.8, 0.6, 0.4, 0.2, β = 1 − α) for the 7 trainable routers, next to ModelPilot's λ sweep. Every row is on the chart; the line is the Pareto frontier (oracle excluded).
+
+![ModelPilot vs LLMRouter](results/v4_llmrouter/cost_vs_score.png)
+
+Rows on the frontier, cheapest first:
+
+| Router | Setting | Avg score | Total cost ($) |
+|---|---|---:|---:|
+| LLMRouter svmrouter | α = 0.6 | 0.714 | 0.044 |
+| ModelPilot kNN | λ = 3 | 0.719 | 0.084 |
+| ModelPilot kNN | λ = 1 | 0.720 | 0.129 |
+| LLMRouter graphrouter | α = 0.6 | 0.744 | 0.196 |
+| LLMRouter knnrouter / svmrouter | modified labels, α = 1.0 | 0.808 | 1.70 |
+
+What this says:
+
+- **Cheap end:** LLMRouter's svmrouter and knnrouter (α ≤ 0.8) collapse to roughly "always gpt-oss-20b, with a few swaps" and cost less than ModelPilot λ = 10. A paired bootstrap (1,000 resamples) finds no real score difference against λ = 10 (svm α = 0.8: +0.003, 95% CI [−0.007, +0.012]), but both beat always-cheapest (+0.016 [+0.010, +0.022]). See [bootstrap_cheap_end.md](results/v4_llmrouter/bootstrap_cheap_end.md).
+- **Middle:** ModelPilot λ = 1 and λ = 3 stay on the frontier.
+- **λ ≤ 0.3:** dominated by graphrouter α = 0.6 (higher score, lower cost). graphrouter is unstable across α (0.43 to 0.74 avg score, not monotonic, one training run each), so treat that point as a single lucky run, not a reliable setting.
+
+Full results: [results/v4_llmrouter/comparison.csv](results/v4_llmrouter/comparison.csv).
 
 ## Live API
 

@@ -1,0 +1,29 @@
+{
+  "router": "mfrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.6,
+  "beta": 0.4,
+  "avg_performance": 0.711,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 44.5,
+  "avg_token_cost": 172.9,
+  "avg_price_cost": 1.744e-05,
+  "avg_reward": 0.419,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-20b": 2875,
+    "gemma-2-9b-it": 446,
+    "llama-3-8b-instruct-lite": 166,
+    "rnj-1-instruct": 65,
+    "mistral-small-3-24b-instruct": 50,
+    "gpt-oss-120b": 45,
+    "qwen2.5-7b-instruct": 45,
+    "llama-4-maverick": 10,
+    "llama-3.3-70b-instruct-turbo": 8,
+    "qwen3-next-80b-a3b-instruct": 5,
+    "deepseek-v3.1": 4,
+    "llama3-70b-instruct": 4,
+    "mistral-7b-instruct-v0.3": 3,
+    "cogito-v2-1-671b": 3
+  }
+}

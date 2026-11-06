@@ -1,0 +1,16 @@
+{
+  "router": "elorouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.8,
+  "beta": 0.2,
+  "avg_performance": 0.6976,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 40.4,
+  "avg_token_cost": 168.7,
+  "avg_price_cost": 1.449e-05,
+  "avg_reward": 0.5424,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-20b": 3729
+  }
+}

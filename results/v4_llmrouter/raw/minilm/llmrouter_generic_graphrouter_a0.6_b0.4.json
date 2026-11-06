@@ -1,0 +1,16 @@
+{
+  "router": "graphrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.6,
+  "beta": 0.4,
+  "avg_performance": 0.7444,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 55.6,
+  "avg_token_cost": 183.9,
+  "avg_price_cost": 5.26e-05,
+  "avg_reward": 0.3939,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-120b": 3729
+  }
+}

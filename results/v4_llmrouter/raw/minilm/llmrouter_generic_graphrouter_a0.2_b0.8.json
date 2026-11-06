@@ -1,0 +1,18 @@
+{
+  "router": "graphrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.2,
+  "beta": 0.8,
+  "avg_performance": 0.6997,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 43.9,
+  "avg_token_cost": 172.3,
+  "avg_price_cost": 3.262e-05,
+  "avg_reward": 0.1267,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-20b": 3524,
+    "cogito-v2-1-671b": 204,
+    "rnj-1-instruct": 1
+  }
+}

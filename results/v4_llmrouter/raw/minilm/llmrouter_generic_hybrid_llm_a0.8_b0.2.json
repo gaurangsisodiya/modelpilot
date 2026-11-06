@@ -1,0 +1,17 @@
+{
+  "router": "hybrid_llm",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.8,
+  "beta": 0.2,
+  "avg_performance": 0.6496,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 118.7,
+  "avg_token_cost": 247.1,
+  "avg_price_cost": 0.00014659,
+  "avg_reward": 0.5045,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "qwen2.5-7b-instruct": 2925,
+    "cogito-v2-1-671b": 804
+  }
+}

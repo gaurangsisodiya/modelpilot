@@ -1,0 +1,17 @@
+{
+  "router": "graphrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 0.8,
+  "beta": 0.2,
+  "avg_performance": 0.5903,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 101.9,
+  "avg_token_cost": 230.2,
+  "avg_price_cost": 0.00010461,
+  "avg_reward": 0.4454,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "gpt-oss-120b": 1947,
+    "mixtral-8x7b-instruct-v0.1": 1782
+  }
+}

@@ -5,6 +5,7 @@ import pytest
 
 from modelpilot.baselines import always, best_model, cheapest_model, oracle
 from modelpilot.evaluation import evaluate
+from modelpilot.report import pareto_frontier
 from modelpilot.summary import model_summary
 
 
@@ -52,3 +53,10 @@ def test_evaluate_reports_avg_score_and_total_cost(results):
 def test_evaluate_rejects_choice_missing_from_results(results):
     with pytest.raises(ValueError):
         evaluate(results, pd.Series({0: "unknown-model"}))
+
+
+def test_pareto_frontier_keeps_only_undominated_rows():
+    table = pd.DataFrame(
+        {"router": ["a", "b", "c", "d"], "total_cost": [1.0, 2.0, 3.0, 2.5], "avg_score": [0.5, 0.7, 0.9, 0.6]}
+    )
+    assert pareto_frontier(table)["router"].tolist() == ["a", "b", "c"]  # d costs more than b and scores less

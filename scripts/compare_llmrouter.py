@@ -10,6 +10,7 @@ from modelpilot.baselines import always, evaluate_baselines
 from modelpilot.cost import add_cost
 from modelpilot.data import load_candidates, load_split
 from modelpilot.evaluation import evaluate
+from modelpilot.report import plot_comparison
 
 V4 = Path("results/v4_llmrouter")
 
@@ -90,8 +91,9 @@ def main() -> None:
     table = pd.concat([load_modelpilot(args.sweep, baselines), llmrouter], ignore_index=True)
 
     table.to_csv(V4 / "comparison.csv", index=False)
+    plot_comparison(table, V4 / "cost_vs_score.png")
     print(table.drop(columns=["alpha", "queries"]).to_string(index=False, float_format=lambda x: f"{x:.4f}"))
-    print(f"\nSaved {V4 / 'comparison.csv'}")
+    print(f"\nSaved {V4 / 'comparison.csv'} and {V4 / 'cost_vs_score.png'}")
 
 
 if __name__ == "__main__":

@@ -14,16 +14,26 @@ from modelpilot.evaluation import evaluate
 V4 = Path("results/v4_llmrouter")
 
 
+MODIFIED_SUFFIX = "_modified_labels"
+
+
 def load_llmrouter(raw_dir: Path) -> pd.DataFrame:
-    """One row per LLMRouter result JSON; raw/<embeddings>/<dataset>_<router>_a<a>_b<b>.json."""
+    """One row per LLMRouter result JSON; raw/<run>/<dataset>_<router>_a<a>_b<b>.json.
+
+    A run folder ending in "_modified_labels" holds routers trained on our tie-broken labels;
+    every other folder uses LLMRouter's default labels.
+    """
     rows = []
     for path in sorted(raw_dir.glob("*/*.json")):
         result = json.loads(path.read_text())
+        run = path.parent.name
+        modified = run.endswith(MODIFIED_SUFFIX)
         rows.append(
             {
                 "source": "LLMRouter",
                 "router": result["router"],
-                "embeddings": path.parent.name,
+                "labels": "modified labels" if modified else "default",
+                "embeddings": run.removesuffix(MODIFIED_SUFFIX),
                 "setting": f"alpha={result['alpha']}",
                 "alpha": result["alpha"],
                 "avg_score": result["avg_performance"],
@@ -42,6 +52,7 @@ def load_modelpilot(sweep_path: Path, baselines: pd.DataFrame) -> pd.DataFrame:
         {
             "source": "ModelPilot",
             "router": "modelpilot_knn",
+            "labels": "-",
             "embeddings": "minilm",
             "setting": [f"lambda={lam:g}" for lam in sweep["lambda"]],
             "avg_score": sweep["avg_score"],
@@ -50,13 +61,14 @@ def load_modelpilot(sweep_path: Path, baselines: pd.DataFrame) -> pd.DataFrame:
             "top_model": sweep["top_model"],
         }
     )
-    base = baselines.assign(source="baseline", router=baselines["strategy"], embeddings="-", setting="-")
+    base = baselines.assign(source="baseline", router=baselines["strategy"], labels="-", embeddings="-", setting="-")
     return pd.concat([router, base.drop(columns="strategy")], ignore_index=True)
 
 
 def check_replay(llmrouter: pd.DataFrame, test: pd.DataFrame) -> None:
     """LLMRouter's fixed-model baselines must score exactly like our evaluate() on that model."""
-    for row in llmrouter[llmrouter["router"].isin(["largest_llm", "smallest_llm"])].itertuples():
+    fixed = llmrouter["router"].isin(["largest_llm", "smallest_llm"]) & (llmrouter["labels"] == "default")
+    for row in llmrouter[fixed].itertuples():
         ours = evaluate(test, always(test, row.top_model))
         if abs(ours["avg_score"] - row.avg_score) > 1e-4 or abs(ours["total_cost"] - row.total_cost) > 1e-4:
             raise ValueError(f"{row.router} ({row.top_model}) does not match ModelPilot's evaluation: {ours}")

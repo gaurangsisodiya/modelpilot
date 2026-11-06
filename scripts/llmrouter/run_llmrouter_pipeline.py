@@ -33,6 +33,7 @@ def main() -> None:
     parser.add_argument("--text-dim", type=int, required=True, help="embedding size: 384 MiniLM, 1024 Qwen3")
     parser.add_argument("--routers", default=",".join(ROUTERS))
     parser.add_argument("--alphas", default=",".join(map(str, ALPHAS)))
+    parser.add_argument("--model-tag", default="", help="suffix for saved model files, so runs don't overwrite each other")
     args = parser.parse_args()
 
     sys.path.insert(0, str(PIPELINE))
@@ -42,6 +43,17 @@ def main() -> None:
     rp.POOL_DIR = str(args.data_dir.resolve() / "llm_candidates")
     rp.RESULTS_DIR = str(args.results_dir.resolve())
     rp.ROUTER_HPARAMS["mfrouter"]["text_dim"] = args.text_dim
+    if args.model_tag:
+        build_config = rp.build_config
+
+        def tagged_build_config(*a, **kw):
+            cfg = build_config(*a, **kw)
+            for key in ("save_model_path", "load_model_path"):
+                stem, ext = cfg["model_path"][key].rsplit(".", 1)
+                cfg["model_path"][key] = f"{stem}_{args.model_tag}.{ext}"
+            return cfg
+
+        rp.build_config = tagged_build_config
 
     for alpha in (float(a) for a in args.alphas.split(",")):
         beta = round(1 - alpha, 1)

@@ -1,0 +1,25 @@
+{
+  "router": "knnrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 1.0,
+  "beta": 0.0,
+  "avg_performance": 0.8077,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 237.7,
+  "avg_token_cost": 366.0,
+  "avg_price_cost": 0.00045519,
+  "avg_reward": 0.8077,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "cogito-v2-1-671b": 3689,
+    "llama-3.3-70b-instruct-turbo": 11,
+    "qwen3-coder-next": 10,
+    "mistral-small-3-24b-instruct": 5,
+    "llama-4-maverick": 3,
+    "qwen2.5-7b-instruct": 3,
+    "qwen3-next-80b-a3b-instruct": 2,
+    "gpt-oss-20b": 2,
+    "llama-3-8b-instruct-lite": 2,
+    "gpt-oss-120b": 2
+  }
+}

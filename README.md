@@ -45,6 +45,34 @@ Fixed models are chosen from the **train** split and everything is evaluated on 
 
 Experiments are recorded in [DECISIONS.md](DECISIONS.md) and `results/v1`–`v3`: similarity weighting with cost tie-breaks was kept; stripping the shared instruction template before embedding was tested (v2) and reverted, because the instruction text tells the router what kind of task it is.
 
+## Comparison with LLMRouter
+
+[LLMRouter](https://github.com/ulab-uiuc/LLMRouter) (commit `c65ee01`) is the official router library for xRouteBench. Its `benchmark_pipeline` was run on the same train/test split, CPU-only, with no API calls: it replays the recorded test outcomes, and its fixed-model baselines score exactly the same as ModelPilot's evaluation.
+
+What the rows mean:
+
+- **Embeddings: MiniLM for every row.** LLMRouter's standard embedding model, Qwen3-Embedding-0.6B (behind its published numbers), was **not run**: it needs ~4 hours on this CPU. Both systems therefore see the same `all-MiniLM-L6-v2` vectors, so only the routing method differs. These numbers are not comparable to LLMRouter's published ones.
+- **Labels "default"**: LLMRouter's code and training labels, unchanged.
+- **Labels "modified labels"**: my modification, for knnrouter and svmrouter at α = 1.0 only. LLMRouter labels each train query with the single best model, but on 93.6% of train queries several models tie, and the tie goes to whichever model is listed first (qwen2.5-7b-instruct, a weak model): 58.6% of all labels. The modified rows break ties toward the model with the highest train avg score instead. The data file is reordered; LLMRouter's code is not changed.
+
+Pure-performance training (α = 1.0, LLMRouter's default):
+
+| Router | Labels | Avg score | Total cost ($) |
+|---|---|---:|---:|
+| ModelPilot kNN, λ = 0 | – | 0.736 | 0.518 |
+| LLMRouter knnrouter | default | 0.589 | 0.161 |
+| LLMRouter svmrouter | default | 0.591 | 0.142 |
+| LLMRouter mlprouter | default | 0.616 | 0.242 |
+| LLMRouter mfrouter | default | 0.601 | 0.189 |
+| LLMRouter hybrid_llm | default | 0.648 | 0.558 |
+| LLMRouter elorouter | default | 0.576 | 0.147 |
+| LLMRouter graphrouter | default | 0.430 | 0.601 |
+| LLMRouter knnrouter | **modified labels** | 0.808 | 1.697 |
+| LLMRouter svmrouter | **modified labels** | 0.808 | 1.705 |
+| always-best (cogito-v2-1-671b) | – | 0.805 | 1.707 |
+
+With modified labels, knnrouter and svmrouter route ~99% of queries to cogito-v2-1-671b, so they match always-best. Full results, including LLMRouter's cost-aware settings, are in [results/v4_llmrouter/comparison.csv](results/v4_llmrouter/comparison.csv).
+
 ## Live API
 
 `POST /route` returns the model the router picks. `POST /chat` routes the query, then calls the model on NVIDIA's API.

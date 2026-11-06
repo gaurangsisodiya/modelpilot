@@ -1,0 +1,18 @@
+{
+  "router": "svmrouter",
+  "dataset": "llmrouter_generic",
+  "alpha": 1.0,
+  "beta": 0.0,
+  "avg_performance": 0.8084,
+  "avg_input_tokens": 128.4,
+  "avg_output_tokens": 237.9,
+  "avg_token_cost": 366.3,
+  "avg_price_cost": 0.00045712,
+  "avg_reward": 0.8084,
+  "num_queries": 3729,
+  "routing_distribution": {
+    "cogito-v2-1-671b": 3710,
+    "qwen3-coder-next": 15,
+    "llama-3.3-70b-instruct-turbo": 4
+  }
+}

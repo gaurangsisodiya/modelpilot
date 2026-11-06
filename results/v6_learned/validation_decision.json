@@ -1,0 +1,14 @@
+{
+  "knn_k": 20,
+  "mlp_hidden": 256,
+  "mlp_alpha": 1.0,
+  "cost_alpha": 0.1,
+  "default_lambda": 1.0,
+  "mlp_minus_knn_at_default": {
+    "diff": -0.011602777505722242,
+    "ci_low": -0.03192433997323974,
+    "ci_high": 0.005165735024839941,
+    "cost_ratio": 0.98938645973198
+  },
+  "default_router": "knn"
+}

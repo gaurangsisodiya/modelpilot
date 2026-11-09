@@ -21,3 +21,8 @@ Blocked: SMALL_API_KEY not in .env yet, haven't deployed.
 Did: guidellm 0.8.1 scripts for all-small / all-large / routed through the gateway, real test prompts, max_tokens 512, concurrency 1/8/32 x 60s. Docs were vague so installed it and tested the CLI against the fake backend first. Two cost columns, token price vs what I actually pay (Together + GPU $/hr for the window). Preflight hits each backend once so a bad .env fails before the GPU minutes burn. All-large runs before deploy, GPU only for small + auto, ~20-25 min.
 Surprise: routing itself is the bottleneck on my laptop, embedding caps at ~23 req/s, torch thread limits didn't help. Added a route ms column instead of fixing it.
 Blocked: no keys in .env yet, live numbers wait for the pod session.
+
+## 2026-11-09 · all-large live run
+Did: ran all-large through the gateway, conc 1/8/32 x 60s, 636 ok. 7.9 req/s at 32, ttft median ~0.45s at 1-8, ~1.1s at 32.
+Finding: the 4 errors at conc 8 were all HTTP 503 from Together, passed through by the gateway, all in the same 1.8s at the start of the run when 8 requests hit at once. None after that, none at 32. Gateway doesn't save the error body so I can't tell if it was a rate limit or capacity, should log it.
+Finding: gpt-oss-120b reasons before it answers. 111/636 replies (17.5%) hit the 512 cap, and 84 of those (13.2% of all) came back with an empty answer because reasoning used the whole budget. Every empty answer was a capped one. So the 512 cap costs score on large, and the offline expected avg score won't match live for it.

@@ -6,6 +6,8 @@ An LLM router: for each incoming query, pick the **cheapest model that is likely
 
 It learns from [xRouteBench](https://huggingface.co/datasets/ulab-ai/xRouteBench) (`ulab-ai/xRouteBench`), where 18 open models were each run on the same ~8,200 queries (math, code, multiple choice, reading comprehension) and scored. An OpenAI-compatible gateway routes each request between a self-hosted small model (Qwen2.5-7B on a rented GPU) and a large hosted one (gpt-oss-120b on Together), and was load-tested live with GuideLLM.
 
+**Headline result (final router, k = 20, λ = 1, 3,729 test queries):** 0.732 avg score at $0.124, vs 0.805 at $1.707 for the best single model, so 93% cheaper for about 0.07 less. The Results table below is the earlier k = 10 version (0.720 / $0.129).
+
 ```mermaid
 flowchart LR
     C["Client or GuideLLM"] -->|"POST /v1/chat/completions, model auto, small or large"| G["ModelPilot gateway (FastAPI)"]

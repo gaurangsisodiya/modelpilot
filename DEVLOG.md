@@ -16,3 +16,8 @@ Blocked: no Together key yet, couldn't hit /v1/models myself.
 ## 2026-11-09 · GPU guide
 Did: wrote docs/gpu_session.md for RunPod + vLLM (qwen 7B, 24 GB card, vllm v0.32.0 pinned). Went with RunPod https proxy url not ssh tunnel, vllm image has no sshd. API key is the main thing, url is public so without --api-key anyone can use my GPU. Added checks: key set in .env before deploy, 401 without key / 200 with key before gateway, find Terminate button before starting, check balance after. Terminate not stop, no volume disk.
 Blocked: SMALL_API_KEY not in .env yet, haven't deployed.
+
+## 2026-11-09 · live benchmark scripts
+Did: guidellm 0.8.1 scripts for all-small / all-large / routed through the gateway, real test prompts, max_tokens 512, concurrency 1/8/32 x 60s. Docs were vague so installed it and tested the CLI against the fake backend first. Two cost columns, token price vs what I actually pay (Together + GPU $/hr for the window). Preflight hits each backend once so a bad .env fails before the GPU minutes burn. All-large runs before deploy, GPU only for small + auto, ~20-25 min.
+Surprise: routing itself is the bottleneck on my laptop, embedding caps at ~23 req/s, torch thread limits didn't help. Added a route ms column instead of fixing it.
+Blocked: no keys in .env yet, live numbers wait for the pod session.

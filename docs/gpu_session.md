@@ -22,6 +22,27 @@ Facts checked against the vLLM and RunPod docs on 2026-11-09. RunPod's web UI ch
 - [ ] **Find the way out before the meter starts.** In the console, open **Pods** and find where a pod's **Stop** and **Terminate** (trash-can) controls sit, and where you can see your balance and spend. If you use `runpodctl`, run `runpodctl pod list` once now so you know it works. You don't want to be searching for this with a GPU billing.
 - [ ] Note the time you deploy. Plan for under 1 hour in total.
 
+## Benchmark session plan: keep the GPU busy
+
+The GPU is needed **only** for the all-small and routed runs. Everything else happens before Deploy or after Terminate.
+
+**Before you deploy (no GPU, no pod cost):**
+
+- [ ] `uv tool install guidellm==0.8.1`, then `guidellm --version` shows 0.8.1.
+- [ ] Dry run of the whole pipeline against the fake backend, so the scripts are proven before the meter runs:
+  ```bash
+  FAKE_DELAY_SECONDS=0.3 uv run uvicorn modelpilot.fake_backend:app --port 8001 &
+  LARGE_BASE_URL=http://localhost:8001/v1 LIVE_OUT=/tmp/live_dry/raw STREAMS=1,4 SECONDS_PER_LEVEL=10 \
+    scripts/live_benchmark.sh small large auto
+  uv run python scripts/summarize_live.py --raw /tmp/live_dry/raw --gpu-price-per-hour 0.5
+  kill %1
+  ```
+- [ ] Run **all-large now**. It only needs Together, not the GPU (~4 min):
+  ```bash
+  scripts/live_benchmark.sh large
+  ```
+- [ ] Laptop plugged in and not going to sleep; no other heavy programs running (routing embeds on your CPU).
+
 ## 1. Deploy the pod
 
 In the RunPod console: **Pods → Deploy**.
@@ -121,7 +142,25 @@ curl -s localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
 tail -1 logs/gateway.jsonl          # backend "small", status 200, tokens, latency
 ```
 
-Now run the Phase 11 benchmarks in this same session.
+**Run the benchmarks right away.** One command; it starts its own gateway, so stop any gateway you started for the test above first:
+
+```bash
+scripts/live_benchmark.sh small auto        # ~8 min: preflight, then 3 levels x 60 s each
+```
+
+- If the preflight fails, it stops within seconds. Fix `.env` and rerun; don't debug for long while the pod bills.
+- While it runs, watch for `errored=` counts going up in the progress lines. A few at concurrency 32 are OK; many mean the pod is overloaded or the 100 s proxy limit is hit.
+- **The moment it prints `done`, go to step 6 and terminate.** The summary does not need the GPU.
+
+**Expected GPU time:** deploy and model load ~10 min + health check ~2 min + benchmarks ~8 min = **~20–25 min**.
+
+**After terminating (no GPU):**
+
+```bash
+uv run python scripts/summarize_live.py --gpu-price-per-hour <$/hr you wrote down> --gpu "<GPU type>"
+```
+
+This writes `results/v5_live/live_results.md` and `.csv`.
 
 ## 6. STOP: terminate the pod
 

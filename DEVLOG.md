@@ -12,3 +12,7 @@ Did: held out 20% of train as validation, tuned everything there (k=20, λ=1, ML
 ## 2026-11-09 · gateway
 Did: OpenAI-compatible gateway, model auto/small/large, streaming passthrough, fake backend with fixed delay, JSON log per request with latency, tokens, cost. Tests run the fake in-process, no ports. Checked Together before relying on it, Llama-3.3-70B Turbo got removed from serverless on 10-22, switched large to gpt-oss-120b. Surprise: by dataset price gpt-oss-120b is cheaper than qwen-7b on 61% of queries, so router sends ~70% to large. Real trade-off is going to be GPU hour cost for qwen, not tokens.
 Blocked: no Together key yet, couldn't hit /v1/models myself.
+
+## 2026-11-09 · GPU guide
+Did: wrote docs/gpu_session.md for RunPod + vLLM (qwen 7B, 24 GB card, vllm v0.32.0 pinned). Went with RunPod https proxy url not ssh tunnel, vllm image has no sshd. API key is the main thing, url is public so without --api-key anyone can use my GPU. Added checks: key set in .env before deploy, 401 without key / 200 with key before gateway, find Terminate button before starting, check balance after. Terminate not stop, no volume disk.
+Blocked: SMALL_API_KEY not in .env yet, haven't deployed.

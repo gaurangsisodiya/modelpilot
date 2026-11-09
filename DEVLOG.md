@@ -8,3 +8,7 @@ Blocked: Qwen3 embeddings too slow on CPU (~4 h), cancelled. α sweep still runn
 
 ## 2026-11-06 · learned router
 Did: held out 20% of train as validation, tuned everything there (k=20, λ=1, MLP 256). On validation MLP lost to kNN so kNN stays default. Ran test once and MLP was better at every λ, +0.014 at λ=1 but 20% more cost. Didn't expect validation and test to disagree like that, 897 queries is probably too small. Kept kNN, didn't touch it after seeing test.
+
+## 2026-11-09 · gateway
+Did: OpenAI-compatible gateway, model auto/small/large, streaming passthrough, fake backend with fixed delay, JSON log per request with latency, tokens, cost. Tests run the fake in-process, no ports. Checked Together before relying on it, Llama-3.3-70B Turbo got removed from serverless on 10-22, switched large to gpt-oss-120b. Surprise: by dataset price gpt-oss-120b is cheaper than qwen-7b on 61% of queries, so router sends ~70% to large. Real trade-off is going to be GPU hour cost for qwen, not tokens.
+Blocked: no Together key yet, couldn't hit /v1/models myself.

@@ -13,8 +13,14 @@ Facts checked against the vLLM and RunPod docs on 2026-11-09. RunPod's web UI ch
   ```bash
   openssl rand -hex 24
   ```
-  Put it in `.env` as `SMALL_API_KEY=<that value>`. Never commit `.env`.
+  Put it in `.env` as `SMALL_API_KEY=<that value>`. Never commit `.env`. Check that it's set without printing it:
+  ```bash
+  grep -cE '^SMALL_API_KEY *= *[^ ]+' .env   # must print 1
+  ```
+  **Don't deploy until this prints 1.** A pod started without `--api-key` is open to anyone who finds the URL, at your expense.
 - [ ] Some RunPod credit loaded.
+- [ ] **Find the way out before the meter starts.** In the console, open **Pods** and find where a pod's **Stop** and **Terminate** (trash-can) controls sit, and where you can see your balance and spend. If you use `runpodctl`, run `runpodctl pod list` once now so you know it works. You don't want to be searching for this with a GPU billing.
+- [ ] Note the time you deploy. Plan for under 1 hour in total.
 
 ## 1. Deploy the pod
 
@@ -38,6 +44,14 @@ In the RunPod console: **Pods → Deploy**.
 ```
 --model Qwen/Qwen2.5-7B-Instruct --port 8000 --max-model-len 8192 --gpu-memory-utilization 0.90 --api-key <SMALL_API_KEY value>
 ```
+
+To paste the key without it showing in your terminal, copy it straight to the Windows clipboard from WSL:
+
+```bash
+grep -E '^SMALL_API_KEY *=' .env | cut -d= -f2- | tr -d ' \n' | clip.exe
+```
+
+Before you click Deploy, read the command once more: it must end with `--api-key` followed by the key.
 
 What each flag does:
 
@@ -74,15 +88,19 @@ Limit to know about: RunPod's proxy (Cloudflare) closes a connection with a **52
 
 ```bash
 POD=https://<POD_ID>-8000.proxy.runpod.net
-KEY=<SMALL_API_KEY value>
+KEY=$(grep -E '^SMALL_API_KEY *=' .env | cut -d= -f2- | tr -d ' ')   # read from .env, never typed or printed
 
-curl -s -o /dev/null -w "%{http_code}\n" $POD/health                 # 200 = ready
-curl -s $POD/v1/models -H "Authorization: Bearer $KEY"               # lists Qwen/Qwen2.5-7B-Instruct
+curl -s -o /dev/null -w "%{http_code}\n" $POD/health                                        # 200 = ready
+curl -s -o /dev/null -w "%{http_code}\n" $POD/v1/models                                     # MUST be 401
+curl -s -o /dev/null -w "%{http_code}\n" $POD/v1/models -H "Authorization: Bearer $KEY"     # MUST be 200
 curl -s $POD/v1/chat/completions -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d '{"model":"Qwen/Qwen2.5-7B-Instruct","messages":[{"role":"user","content":"Say hi in 3 words."}],"max_tokens":10}'
 ```
 
-`/v1/models` without the key should return **401**. That confirms the key works.
+**Gate: go on to step 5 only if the check without the key gives 401 and the check with the key gives 200.**
+
+- **200 without the key** means the server is open to anyone. Terminate the pod now and redeploy with `--api-key`. Don't "fix it later".
+- **401 with the key** means the key in `.env` doesn't match the one in the start command. Fix `.env`, not the pod.
 
 ## 5. Point the gateway at the pod
 
@@ -119,7 +137,11 @@ Do this as soon as the benchmarks finish. An idle pod bills exactly like a busy 
    runpodctl pod delete <POD_ID>
    runpodctl pod list --all      # the pod should be gone
    ```
-3. Check: the pod is gone from **Pods**, and the billing page shows no running pods.
+3. **Check that billing stopped.** Don't skip this.
+   - The pod is gone from **Pods**, and `runpodctl pod list --all` doesn't show it.
+   - `curl -s -o /dev/null -w "%{http_code}\n" $POD/health` no longer returns 200.
+   - Note your balance, check it again ~10 minutes later, and confirm it hasn't dropped.
+   - Write down the deploy-to-terminate time and the $/hour. That's the session cost for Phase 11.
 4. In `.env`, set `SMALL_BASE_URL` back to `http://localhost:8001/v1` (the fake backend), so the gateway doesn't point at a dead URL.
 
 ## Troubleshooting

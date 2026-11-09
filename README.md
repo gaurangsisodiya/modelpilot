@@ -1,5 +1,7 @@
 # ModelPilot
 
+**Latest release: [v2.1](https://github.com/gaurangsisodiya/modelpilot/tags)** — Phase 12, v7 checks and README updates.
+
 An LLM router: for each incoming query, pick the **cheapest model that is likely to answer it well**, instead of sending everything to one expensive model.
 
 It learns from [xRouteBench](https://huggingface.co/datasets/ulab-ai/xRouteBench) (`ulab-ai/xRouteBench`), where 18 open models were each run on the same ~8,200 queries (math, code, multiple choice, reading comprehension) and scored. An OpenAI-compatible gateway routes each request between a self-hosted small model (Qwen2.5-7B on a rented GPU) and a large hosted one (gpt-oss-120b on Together), and was load-tested live with GuideLLM.

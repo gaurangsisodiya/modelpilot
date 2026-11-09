@@ -52,6 +52,8 @@ Fixed models are chosen from the **train** split and everything is evaluated on 
 - The oracle beats the best single model (0.929 vs 0.805) at 7% of its cost: cheap models are right on most queries, *if* you know which ones.
 - The router at **λ = 3** improves on always-cheapest (+0.021 avg score) for $0.03 more; lower λ adds little score for much more cost.
 - The router does not reach always-best. kNN over MiniLM embeddings can't reliably tell which queries a cheap model will get right; only ~58% of a query's neighbours come from the same task.
+- **Better than random mixing**, except when cost is ignored. Against a random mix of always-cheapest and always-best with the same total cost (paired bootstrap, 95% CI), the router wins at λ ≥ 0.3: v3 (k = 10) by +0.015 to +0.020, final (k = 20) by +0.026 at λ = 0.3 and +0.030 [+0.018, +0.042] at λ = 1. At λ = 0 neither beats the mix (v3 +0.008 [−0.005, +0.020], final +0.001 [−0.011, +0.012]). See [random_mix.md](results/v7_checks/random_mix.md).
+- **Per task vs always-best**, at λ = 0 and λ = 1, for both v3 and final: the router wins on human_eval and squad (and gsm8k at λ = 0), and loses on math, mbpp, mmlu, mmlu_pro, arc_challenge and openbook_qa, most on mmlu_pro (v3 −0.214 / −0.236, final −0.184 / −0.204). The human_eval win comes from cogito scoring 0 on all 16 queries. See [per_task.md](results/v7_checks/per_task.md).
 
 Experiments are recorded in [DECISIONS.md](DECISIONS.md) and `results/v1`–`v3`: similarity weighting with cost tie-breaks was kept; stripping the shared instruction template before embedding was tested (v2) and reverted, because the instruction text tells the router what kind of task it is.
 

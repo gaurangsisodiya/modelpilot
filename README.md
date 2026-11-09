@@ -2,13 +2,23 @@
 
 An LLM router: for each incoming query, pick the **cheapest model that is likely to answer it well**, instead of sending everything to one expensive model.
 
-It learns from [xRouteBench](https://huggingface.co/datasets/ulab-ai/xRouteBench) (`ulab-ai/xRouteBench`), where 18 open models were each run on the same ~8,200 queries (math, code, multiple choice, reading comprehension) and scored. A FastAPI service exposes the router and can answer queries live through NVIDIA's OpenAI-compatible API.
+It learns from [xRouteBench](https://huggingface.co/datasets/ulab-ai/xRouteBench) (`ulab-ai/xRouteBench`), where 18 open models were each run on the same ~8,200 queries (math, code, multiple choice, reading comprehension) and scored. An OpenAI-compatible gateway routes each request between a self-hosted small model (Qwen2.5-7B on a rented GPU) and a large hosted one (gpt-oss-120b on Together), and was load-tested live with GuideLLM.
+
+```mermaid
+flowchart LR
+    C["Client or GuideLLM"] -->|"POST /v1/chat/completions, model auto, small or large"| G["ModelPilot gateway (FastAPI)"]
+    G -->|"model auto"| R["kNN router: MiniLM embedding, k = 20, pick max score − λ × cost"]
+    R -->|"small or large"| G
+    G -->|small| S["Qwen2.5-7B-Instruct, vLLM on a RunPod GPU"]
+    G -->|large| L["gpt-oss-120b, Together API"]
+    G --> Log[("logs/gateway.jsonl: backend, route time, TTFT, tokens, cost")]
+```
 
 ## How it works
 
 1. **Cost per call.** For every (query, model) pair: `input_tokens × input_price / 1M + output_tokens × output_price / 1M`, using the model's real token counts and prices from the dataset.
 2. **Embed queries.** Each query becomes a 384-number vector with the `all-MiniLM-L6-v2` sentence encoder; similar queries get nearby vectors.
-3. **k-nearest neighbours.** For a new query, find the 10 most similar training queries (cosine similarity). Each model's **predicted score** and **predicted cost** is the similarity-weighted average of how it did on those 10.
+3. **k-nearest neighbours.** For a new query, find the k most similar training queries (cosine similarity). Each model's **predicted score** and **predicted cost** is the similarity-weighted average of how it did on those k. The default is k = 20, chosen on validation (see [Learned router](#learned-router)); the Results and LLMRouter tables below were run earlier with k = 10.
 4. **Decide.** Pick the model with the highest `predicted_score − λ × predicted_cost` (cost in $ per 1,000 queries). Ties go to the cheaper model. λ is the price of quality: λ = 0 ignores cost, larger λ favours cheaper models.
 
 **Avg score** below is the mean of the dataset's `performance` column: 0/1 for most tasks, F1 between 0 and 1 for SQuAD. It is not called "accuracy" because of that partial credit.
@@ -118,6 +128,62 @@ Then both routers were refit on the full train split and run on test **once**:
 
 On test the MLP scores higher at every λ. At λ = 1 the gain is significant (+0.014, 95% CI [+0.003, +0.024]) but costs 20% more, so it would fail the replacement rule on test as well. The default was fixed before test was run and is not changed after seeing it. Validation and test disagree, which suggests the 897-query validation slice is too small to separate the two routers reliably. Details: [results/v6_learned/](results/v6_learned/).
 
+## Gateway
+
+`modelpilot.gateway` is an OpenAI-compatible `/v1/chat/completions` endpoint, so any OpenAI client or benchmark tool can call it.
+
+- `"model": "auto"` routes with kNN (k = 20) restricted to the two backends, at λ = `ROUTER_LAMBDA` (default 1) or a per-request `"lambda"` field. The routing text is the last user message.
+- `"model": "small"` / `"large"` force a backend (used for the all-small and all-large benchmark runs).
+- Streaming (SSE) is passed through unchanged; the gateway asks the backend for a final usage chunk so every request is logged with its tokens.
+- Each request is one JSON line in `logs/gateway.jsonl`: requested model, backend, λ, route time, TTFT, latency, tokens and cost. The response carries an `x-modelpilot-backend` header.
+
+| Backend | Model | Served by | Price per 1M tokens (in / out, xRouteBench) |
+|---|---|---|---|
+| small | qwen2.5-7b-instruct | vLLM on a 24 GB RunPod GPU (`Qwen/Qwen2.5-7B-Instruct`) | $0.20 / $0.20 |
+| large | gpt-oss-120b | Together (`openai/gpt-oss-120b`) | $0.15 / $0.60 |
+
+Offline, on the full test split with only these two models:
+
+| Setup | Avg score | Total cost ($, dataset tokens) |
+|---|---:|---:|
+| all-small | 0.575 | 0.147 |
+| all-large | 0.744 | 0.196 |
+| routed λ = 1 | 0.743 | 0.144 |
+
+Per token, the "large" model is not the expensive one: at dataset prices gpt-oss-120b is cheaper than qwen2.5-7b on 61% of test queries, because its answers are shorter, so the router sends ~70% of queries to large. Large was going to be Llama-3.3-70B, but Together removed it from serverless on 2026-10-22 (see [DECISIONS.md](DECISIONS.md)). The real cost question is the GPU hour for self-hosting small, which is what the live benchmark measures.
+
+## Live benchmark
+
+[GuideLLM](https://github.com/vllm-project/guidellm) 0.8.1 sent the 3,729 test queries (shuffled) through the gateway at concurrency 1, 8 and 32 for 60 s each, with output capped at 512 tokens. Small ran on an RTX 3090 ($0.50/h, RunPod Secure Cloud); all-large ran before the pod was deployed.
+
+- **Token cost / 1k**: xRouteBench prices × the live token counts.
+- **Live cost / 1k**: what was actually paid: Together tokens for large, plus GPU $/h × the 60 s window for setups that use the pod (the GPU bills even when idle).
+- **Expected avg score**: offline, from the table above. It is not measured live.
+
+| Setup | Conc. | Req/s | TTFT median (ms) | Latency median / p95 (s) | Route ms (median) | Share large | Token cost / 1k ($) | Live cost / 1k ($) | Expected avg score | Errors |
+|---|---:|---:|---:|---|---:|---:|---:|---:|---:|---:|
+| all-small | 1 | 0.63 | 284 | 0.40 / 7.63 | 0 | 0% | 0.046 | 0.219 | 0.575 | 0 |
+| all-small | 8 | 5.00 | 375 | 0.51 / 8.08 | 0 | 0% | 0.043 | 0.027 | 0.575 | 0 |
+| all-small | 32 | 15.33 | 582 | 0.79 / 9.51 | 0 | 0% | 0.041 | 0.009 | 0.575 | 1 |
+| all-large | 1 | 0.27 | 451 | 3.31 / 7.15 | 0 | 100% | 0.200 | 0.200 | 0.744 | 0 |
+| all-large | 8 | 2.40 | 437 | 2.84 / 6.34 | 0 | 100% | 0.176 | 0.176 | 0.744 | 4 |
+| all-large | 32 | 7.90 | 1083 | 3.23 / 7.52 | 0 | 100% | 0.164 | 0.164 | 0.744 | 0 |
+| routed λ = 1 | 1 | 0.22 | 604 | 3.67 / 11.10 | 67 | 71% | 0.131 | 0.704 | 0.743 | 0 |
+| routed λ = 1 | 8 | 2.23 | 488 | 2.60 / 7.63 | 71 | 73% | 0.127 | 0.170 | 0.743 | 0 |
+| routed λ = 1 | 32 | 8.00 | 805 | 2.91 / 8.03 | 143 | 77% | 0.132 | 0.136 | 0.743 | 0 |
+
+Full table (with output tokens/s and TTFT p95) and the session cost: [results/v5_live/live_results.md](results/v5_live/live_results.md). Errors, empty replies and live vs offline cost: [results/v5_live/live_details.md](results/v5_live/live_details.md).
+
+**Reading the results**
+
+- **Under load, routing pays.** At concurrency 32, routed keeps all-large's expected score (0.743 vs 0.744) at 17% lower live cost ($0.136 vs $0.164 per 1k requests). All-small is by far the cheapest ($0.009) but scores 0.575.
+- **At low load, self-hosting doesn't.** At concurrency 1 the GPU is mostly idle, so routed is the most expensive setup ($0.704 per 1k). The GPU only pays off when it is kept busy.
+- **Routing overhead** is 67 ms median at concurrency 1 and 143 ms at 32: the MiniLM embedding runs on the gateway's CPU and queues under load.
+- **gpt-oss-120b's live cost is 3.3× the dataset's** on the same queries (qwen: 1.14×). It reasons before answering and the reasoning tokens bill as output: 222 output tokens per reply live vs 56 in xRouteBench. The router's cost predictions for large are therefore ~3× too low, which probably pushes too many queries to large.
+- **Empty replies.** 13% of all-large replies (8–15% of routed, 0% of all-small) came back with no answer: the reasoning used up the whole 512-token budget. The expected avg score doesn't account for this, so it overstates large and routed at this cap.
+- **Errors**: 4 × HTTP 503 from Together in the same 1.8 s at the start of the all-large concurrency-8 run, and 1 × HTTP 502 on small at concurrency 32. Nothing stored the response bodies, so the causes are unknown.
+- **Session cost**: the pod ran 9 min 38 s from deploy to delete, $0.080 (an earlier pod, aborted before benchmarking, cost $0.16). Live cost / 1k counts only the benchmark windows, not model loading.
+
 ## Live API
 
 `POST /route` returns the model the router picks. `POST /chat` routes the query, then calls the model on NVIDIA's API.
@@ -169,6 +235,53 @@ then, from the repo root:
 uv run uvicorn modelpilot.api:app --port 8000
 ```
 
+### Gateway without a GPU
+
+A fake backend stands in for both models: it waits `FAKE_DELAY_SECONDS`, then returns `max_tokens` dummy tokens (streaming or not, with usage). No keys needed.
+
+```bash
+FAKE_DELAY_SECONDS=0.5 uv run uvicorn modelpilot.fake_backend:app --port 8001 &
+LARGE_BASE_URL=http://localhost:8001/v1 uv run uvicorn modelpilot.gateway:app --port 8000
+
+curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' \
+     -d '{"model": "auto", "messages": [{"role": "user", "content": "What is 17 * 23?"}], "max_tokens": 20}'
+tail -1 logs/gateway.jsonl     # which backend was picked, route time, tokens, cost
+```
+
+(The small backend already defaults to `http://localhost:8001/v1`.) The whole benchmark pipeline can be dry-run the same way; see [docs/gpu_session.md](docs/gpu_session.md).
+
+### Gateway with a GPU
+
+[docs/gpu_session.md](docs/gpu_session.md) is the step-by-step session: deploy vLLM on RunPod with an API key, check it, point the gateway at it, benchmark, terminate. In short:
+
+```bash
+uv tool install guidellm==0.8.1
+scripts/live_benchmark.sh large          # before deploying: needs only TOGETHER_API_KEY
+# deploy the pod, pass the health checks, set SMALL_BASE_URL, then:
+scripts/live_benchmark.sh small auto     # ~8 min of GPU time
+# terminate the pod, then:
+uv run python scripts/summarize_live.py --gpu-price-per-hour 0.50 --gpu "RTX 3090"
+uv run python scripts/live_details.py    # errors, empty replies, live vs offline cost
+```
+
+### `.env` variables
+
+`.env` is gitignored; never commit it or print its values.
+
+| Variable | Used for | Default |
+|---|---|---|
+| `NVIDIA_API_KEY` | `/route` and `/chat` demo API | none |
+| `TOGETHER_API_KEY` | gateway large backend | none |
+| `SMALL_API_KEY` | vLLM `--api-key` on the pod, and the gateway's key for small | none |
+| `SMALL_BASE_URL` | small backend URL (`https://<POD_ID>-8000.proxy.runpod.net/v1` during a session) | `http://localhost:8001/v1` |
+| `LARGE_BASE_URL` | large backend URL | `https://api.together.xyz/v1` |
+| `SMALL_MODEL_ID`, `LARGE_MODEL_ID` | model id sent to the backend | `Qwen/Qwen2.5-7B-Instruct`, `openai/gpt-oss-120b` |
+| `SMALL_ROUTER_MODEL`, `LARGE_ROUTER_MODEL` | xRouteBench model the router and prices use | `qwen2.5-7b-instruct`, `gpt-oss-120b` |
+| `ROUTER_LAMBDA` | default λ for `model: auto` | `1` |
+| `GATEWAY_LOG` | request log path | `logs/gateway.jsonl` |
+| `FAKE_DELAY_SECONDS` | fake backend delay before the first token | `0.5` |
+| `RUNPOD_API_KEY` | optional, only for driving RunPod from its API or `runpodctl`; no repo code reads it | none |
+
 ## Project layout
 
 ```
@@ -186,10 +299,19 @@ src/modelpilot/
   report.py       results table and chart
   nvidia.py       NVIDIA API client
   serving.py      routed model vs NVIDIA fallback
-  api.py          FastAPI app
+  api.py          FastAPI app (/route, /chat)
+  gateway_config.py  small/large backends from env
+  gateway.py      OpenAI-compatible routing gateway
+  fake_backend.py stand-in backend for tests and dry runs
+  live.py         cost per benchmark window from the gateway log
 scripts/          runnable scripts for each step
+  live_prompts.py     test queries as GuideLLM prompts
+  live_benchmark.sh   GuideLLM runs through the gateway
+  summarize_live.py   live results table
+  live_details.py     errors, empty replies, live vs offline cost
+docs/gpu_session.md   RunPod + vLLM session guide
 tests/            pytest unit tests
-results/          sweep CSVs (v1–v3), LLMRouter comparison (v4), learned router (v6)
+results/          sweep CSVs (v1–v3), LLMRouter comparison (v4), live benchmark (v5_live), learned router (v6)
 ```
 
 ## Limitations
@@ -197,3 +319,8 @@ results/          sweep CSVs (v1–v3), LLMRouter comparison (v4), learned route
 - Live queries don't carry the dataset's instruction template, so live routing is less task-aware than the offline evaluation.
 - The test split's task mix differs from train (e.g. 500 vs 63 MMLU-Pro queries), which the router has to cope with.
 - k and the default λ were tuned on a 897-query validation slice, which is small: validation and test disagree on kNN vs MLP.
+- The router's cost predictions come from dataset token counts. Live, gpt-oss-120b used 3.3× the cost the dataset predicts (reasoning tokens), so the gateway's λ = 1 decisions treat large as ~3× cheaper than it is. The router was not retuned on the live numbers.
+- At a 512-token cap, 13% of gpt-oss-120b replies were empty (all reasoning, no answer). The expected avg score in the live table is offline and doesn't include this.
+- The large backend is gpt-oss-120b, not the originally planned Llama-3.3-70B (removed from Together serverless). At dataset prices it is cheaper per query than the small model on 61% of queries, so this two-model setup doesn't test "cheap small vs expensive large" per token; the cost difference is GPU hours.
+- Routing embeds on the gateway's CPU: about 23 queries/s at most on the laptop used, 143 ms median route time at concurrency 32. A busier gateway would need a faster encoder or more CPU.
+- The live numbers come from one session on one GPU type, 60 s per concurrency level. The concurrency-1 rows rest on 13–38 requests.

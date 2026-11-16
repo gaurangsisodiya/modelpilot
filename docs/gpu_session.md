@@ -32,7 +32,7 @@ The GPU is needed **only** for the all-small and routed runs. Everything else ha
 - [ ] Dry run of the whole pipeline against the fake backend, so the scripts are proven before the meter runs:
   ```bash
   FAKE_DELAY_SECONDS=0.3 uv run uvicorn modelpilot.fake_backend:app --port 8001 &
-  LARGE_BASE_URL=http://localhost:8001/v1 LIVE_OUT=/tmp/live_dry/raw STREAMS=1,4 SECONDS_PER_LEVEL=10 \
+  SMALL_BASE_URL=http://localhost:8001/v1 LARGE_BASE_URL=http://localhost:8001/v1 LIVE_OUT=/tmp/live_dry/raw STREAMS=1,4 SECONDS_PER_LEVEL=10 \
     scripts/live_benchmark.sh small large auto
   uv run python scripts/summarize_live.py --raw /tmp/live_dry/raw --gpu-price-per-hour 0.5
   kill %1

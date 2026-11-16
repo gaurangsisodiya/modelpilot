@@ -227,7 +227,17 @@ uv run python scripts/compare_learned.py   # one-time test comparison, kNN vs ML
 uv run pytest                              # unit tests (no data or network needed)
 ```
 
-The first run downloads the dataset and the encoder, and embedding all queries takes ~7 minutes on CPU. Embeddings are cached in `cache/`; delete it if you change how queries are embedded.
+Run every command from the repo root: the embedding cache (`cache/`) and the `results/` paths are relative to the current directory. Every script answers `--help` without doing any work. None of these commands calls a model or costs money; they only download public files from Hugging Face.
+
+**They overwrite committed results:**
+
+- `evaluate_router.py --out results/v3` rewrites `results/v3/router_sweep.csv`. Without `--out` it writes to `results/latest/` (untracked) instead.
+- `make_results.py` rewrites `results/results.md`, `results/baselines.csv` and `results/cost_vs_score.png`.
+- `tune_routers.py` and `compare_learned.py` rewrite the files in `results/v6_learned/`.
+
+On the pinned dataset, all six reproduce the committed files byte for byte (checked on a fresh clone, 2026-11-17, in about 10 minutes on CPU). `git status results` shows any change, and `git checkout results` restores the committed files.
+
+The first run downloads the dataset (about 200 MB, pinned to dataset commit `ea4b6e1` in `src/modelpilot/data.py`) and the encoder (about 90 MB), and embedding all queries takes ~7 minutes on CPU. Embeddings are cached in `cache/`; delete it if you change how queries are embedded.
 
 For the API, put your NVIDIA key in `.env` (gitignored):
 
@@ -241,24 +251,34 @@ then, from the repo root:
 uv run uvicorn modelpilot.api:app --port 8000
 ```
 
+It uses your NVIDIA key: at startup it fetches NVIDIA's model list, and every `/chat` request is a real model call on your NVIDIA account. `/route` only runs the router and calls nothing.
+
 ### Gateway without a GPU
 
 A fake backend stands in for both models: it waits `FAKE_DELAY_SECONDS`, then returns `max_tokens` dummy tokens (streaming or not, with usage). No keys needed.
 
 ```bash
 FAKE_DELAY_SECONDS=0.5 uv run uvicorn modelpilot.fake_backend:app --port 8001 &
-LARGE_BASE_URL=http://localhost:8001/v1 uv run uvicorn modelpilot.gateway:app --port 8000
+SMALL_BASE_URL=http://localhost:8001/v1 LARGE_BASE_URL=http://localhost:8001/v1 \
+  uv run uvicorn modelpilot.gateway:app --port 8000
 
 curl -s localhost:8000/v1/chat/completions -H 'Content-Type: application/json' \
      -d '{"model": "auto", "messages": [{"role": "user", "content": "What is 17 * 23?"}], "max_tokens": 20}'
 tail -1 logs/gateway.jsonl     # which backend was picked, route time, tokens, cost
 ```
 
-(The small backend already defaults to `http://localhost:8001/v1`.) The whole benchmark pipeline can be dry-run the same way; see [docs/gpu_session.md](docs/gpu_session.md).
+Set both URLs on the command line. The gateway also reads `.env`, and a `SMALL_BASE_URL` left there from a GPU session would otherwise send small requests to the pod. Variables set on the command line take precedence over `.env`. The whole benchmark pipeline can be dry-run the same way; see [docs/gpu_session.md](docs/gpu_session.md).
 
 ### Gateway with a GPU
 
-[docs/gpu_session.md](docs/gpu_session.md) is the step-by-step session: deploy vLLM on RunPod with an API key, check it, point the gateway at it, benchmark, terminate. In short:
+[docs/gpu_session.md](docs/gpu_session.md) is the step-by-step session: deploy vLLM on RunPod with an API key, check it, point the gateway at it, benchmark, terminate.
+
+**This costs money.** In the committed session:
+
+- `live_benchmark.sh large` sent about 640 requests to Together, about $0.11 (all-large rows of [live_results.csv](results/v5_live/live_results.csv)). `auto` sends most of its requests to Together too.
+- The RunPod GPU bills by the hour from deploy to delete, whether busy or idle: $0.080 for the 9 min 38 s pod, plus $0.16 for an earlier aborted pod ([live_results.md](results/v5_live/live_results.md)).
+
+The fake-backend dry run in the session guide costs nothing. In short:
 
 ```bash
 uv tool install guidellm==0.8.1

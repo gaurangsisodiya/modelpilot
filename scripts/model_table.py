@@ -1,11 +1,14 @@
 """Print each model's average score and average cost per query on the train split."""
 
+import argparse
+
 from modelpilot.cost import add_cost
 from modelpilot.data import load_candidates, load_split
 from modelpilot.summary import model_summary
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     candidates = load_candidates()
     train = add_cost(load_split("train"), candidates)
 

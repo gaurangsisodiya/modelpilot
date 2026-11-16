@@ -4,6 +4,7 @@ Reads results/v5_live/raw (GuideLLM JSONs + gateway log) and writes results/v5_l
 Does not touch live_results.md.
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -90,6 +91,7 @@ def cost_lines() -> list[str]:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     notes = [
         "",
         "Notes on errors: the gateway passes a backend's non-200 status straight through, and makes its own 502 only",

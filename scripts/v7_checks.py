@@ -5,6 +5,7 @@ existing sweep's λ values. Fixed models (always-cheapest, always-best) are pick
 Writes results/v7_checks/{random_mix,per_task}.{csv,md}.
 """
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -42,6 +43,7 @@ def check_saved(saved_path: Path, version: str, lam: float, rows: pd.DataFrame) 
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     candidates = load_candidates()
     train = add_cost(load_split("train"), candidates)
     test = add_cost(load_split("test"), candidates)

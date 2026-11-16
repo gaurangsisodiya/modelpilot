@@ -1,5 +1,6 @@
 """Tune kNN and the learned router on a validation slice of train; the test split is not loaded."""
 
+import argparse
 import json
 from pathlib import Path
 
@@ -29,6 +30,7 @@ def mse(predicted: np.ndarray, actual: np.ndarray) -> float:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     candidates = load_candidates()
     train = add_cost(load_split("train"), candidates)
     embeddings = split_embeddings("train", train, load_encoder())

@@ -4,6 +4,7 @@ Reads results/v6_learned/validation_decision.json (from tune_routers.py); nothin
 Both routers are refit on the full train split (fit + validation) before routing test.
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -22,6 +23,7 @@ LAMBDAS = [0.0, 0.1, 0.3, 1.0, 3.0, 10.0]
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     decision = json.loads((OUT / "validation_decision.json").read_text())
     candidates = load_candidates()
     train = add_cost(load_split("train"), candidates)

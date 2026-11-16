@@ -1,7 +1,7 @@
 [project]
 name = "modelpilot"
 version = "0.1.0"
-description = "Add your description here"
+description = "LLM router: pick the cheapest model likely to answer each query well (xRouteBench), with an OpenAI-compatible gateway"
 readme = "README.md"
 authors = [
     { name = "Gaurang Sisodiya", email = "gaurangsisodiya@gmail.com" }
@@ -20,9 +20,6 @@ dependencies = [
     "torch>=2.15.0",
     "uvicorn>=0.54.0",
 ]
-
-[project.scripts]
-modelpilot = "modelpilot:main"
 
 [build-system]
 requires = ["uv_build>=0.13.5,<0.14.0"]

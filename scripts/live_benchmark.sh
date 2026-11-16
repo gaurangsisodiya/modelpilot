@@ -7,10 +7,12 @@
 # Starts its own gateway (logging to results/v5_live/raw/gateway.jsonl), sends one request to each
 # backend it needs and stops if any fails, then runs concurrency 1, 8, 32 for 60 s each.
 # Override with STREAMS=1,4 SECONDS_PER_LEVEL=10 MAX_TOKENS=512 LIVE_OUT=... GATEWAY_PORT=...
+# Costs money: large and auto send real requests to Together; small and auto need the GPU pod.
 set -euo pipefail
+case "${1:-}" in -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;; esac
 cd "$(dirname "$0")/.."
 
-[ $# -gt 0 ] || { echo "usage: $0 small|large|auto [...]"; exit 1; }
+[ $# -gt 0 ] || { echo "usage: $0 small|large|auto [...]  (--help for details)"; exit 1; }
 OUT=${LIVE_OUT:-results/v5_live/raw}
 PROMPTS=cache/live_prompts.jsonl
 PORT=${GATEWAY_PORT:-8000}

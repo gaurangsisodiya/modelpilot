@@ -1,5 +1,6 @@
 """Paired bootstrap at the cheap end: LLMRouter knn/svm (alpha=0.8) vs ModelPilot λ=10 and always-cheapest."""
 
+import argparse
 import json
 from pathlib import Path
 
@@ -38,6 +39,7 @@ def check_against_saved(name: str, rows: pd.DataFrame) -> None:
 
 
 def main() -> None:
+    argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
     candidates = load_candidates()
     train = add_cost(load_split("train"), candidates)
     test = add_cost(load_split("test"), candidates)

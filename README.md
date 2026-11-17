@@ -8,6 +8,8 @@ It learns from [xRouteBench](https://huggingface.co/datasets/ulab-ai/xRouteBench
 
 **Headline result (final router, k = 20, λ = 1, 3,729 test queries):** 0.732 avg score at $0.124, vs 0.805 at $1.707 for the best single model, so 93% cheaper for about 0.07 less. The Results table below is the earlier k = 10 version (0.720 / $0.129).
 
+![ModelPilot demo](demo/modelpilot.gif)
+
 ```mermaid
 flowchart LR
     C["Client or GuideLLM"] -->|"POST /v1/chat/completions, model auto, small or large"| G["ModelPilot gateway (FastAPI)"]
@@ -336,6 +338,7 @@ scripts/          runnable scripts for each step
   summarize_live.py   live results table
   live_details.py     errors, empty replies, live vs offline cost
 docs/gpu_session.md   RunPod + vLLM session guide
+demo/                 terminal demo: modelpilot.tape (vhs script, no paid calls), show.py, GIF + MP4
 tests/            pytest unit tests
 results/          sweep CSVs (v1–v3), LLMRouter comparison (v4), live benchmark (v5_live), learned router (v6)
 ```
